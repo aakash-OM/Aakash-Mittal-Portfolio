@@ -1,31 +1,64 @@
 import React from "react";
 import { styles } from "../styles";
 import { ComputersCanvas } from "./canvas";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { personalInfo } from "../constants";
-import WaveBackground from "./WaveBackground";
 
 const Hero = () => {
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+
+  const smoothX = useSpring(mouseX, { stiffness: 40, damping: 18 });
+  const smoothY = useSpring(mouseY, { stiffness: 40, damping: 18 });
+
+  const bgX = useTransform(smoothX, [0, 1], ["6%", "-6%"]);
+  const bgY = useTransform(smoothY, [0, 1], ["4%", "-4%"]);
+
+  const handleMouseMove = (e) => {
+    mouseX.set(e.clientX / window.innerWidth);
+    mouseY.set(e.clientY / window.innerHeight);
+  };
+
   return (
     <section
       className="relative w-full mx-auto"
-      style={{ height: "100vh", overflow: "hidden", backgroundColor: "var(--color-primary)" }}
+      style={{ height: "100vh", overflow: "hidden", backgroundColor: "#050816" }}
+      onMouseMove={handleMouseMove}
     >
-      {/* Layer 0 – animated wave lines */}
-      <WaveBackground />
+      {/* Layer 0 – parallax + breathing hero background */}
+      <motion.div
+        style={{
+          position: "absolute",
+          inset: "-12%",
+          backgroundImage: "url('/herobg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          zIndex: 0,
+          x: bgX,
+          y: bgY,
+        }}
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" }}
+      />
 
-      {/* Layer 1 – 3D Canvas fills entire hero */}
+      {/* Layer 1 – subtle vignette so text stays readable */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          zIndex: 2,
+          background:
+            "linear-gradient(135deg, rgba(5,8,22,0.55) 0%, rgba(5,8,22,0.05) 55%, rgba(5,8,22,0.45) 100%)",
+          zIndex: 1,
+          pointerEvents: "none",
         }}
-      >
+      />
+
+      {/* Layer 2 – 3D Canvas */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 2 }}>
         <ComputersCanvas />
       </div>
 
-      {/* Layer 2 – text (sits on top of canvas) */}
+      {/* Layer 3 – text */}
       <div
         className={`${styles.paddingX} absolute max-w-7xl mx-auto flex flex-row items-start gap-5`}
         style={{ top: 120, left: 0, right: 0, zIndex: 10 }}
@@ -51,7 +84,7 @@ const Hero = () => {
         </div>
       </div>
 
-      {/* Layer 3 – scroll indicator */}
+      {/* Layer 4 – scroll indicator */}
       <div
         className="absolute w-full flex justify-center items-center"
         style={{ bottom: 32, zIndex: 10 }}
