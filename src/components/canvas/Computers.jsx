@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
+import * as THREE from "three";
 
 const CODE_LINES = [
   { x: -0.48, y:  0.60, w: 1.30, c: "#915eff" },
@@ -12,6 +13,48 @@ const CODE_LINES = [
   { x: -0.28, y: -0.48, w: 1.50, c: "#38ef7d" },
   { x: -0.48, y: -0.66, w: 0.70, c: "#915eff" },
 ];
+
+// Renders herobg.png as a large plane inside Three.js so the canvas
+// is fully opaque — no CSS transparency compositing issues.
+const SceneBackground = ({ mouseRef }) => {
+  const meshRef = useRef();
+  const [texture, setTexture] = useState(null);
+  const bx = useRef(0);
+  const by = useRef(0);
+  const scale = useRef(1);
+  const scaleDir = useRef(1);
+
+  useEffect(() => {
+    new THREE.TextureLoader().load("/herobg.png", (t) => setTexture(t));
+  }, []);
+
+  useFrame((_, delta) => {
+    // Slow breathing scale
+    scale.current += scaleDir.current * delta * 0.008;
+    if (scale.current >= 1.06) scaleDir.current = -1;
+    if (scale.current <= 1.00) scaleDir.current =  1;
+
+    // Mouse parallax (opposite direction to desk)
+    const m = mouseRef.current || { x: 0, y: 0 };
+    bx.current += (-m.x * 0.55 - bx.current) * 0.025;
+    by.current += ( m.y * 0.35 - by.current) * 0.025;
+
+    if (meshRef.current) {
+      meshRef.current.position.x = bx.current;
+      meshRef.current.position.y = by.current;
+      meshRef.current.scale.setScalar(scale.current);
+    }
+  });
+
+  if (!texture) return null;
+
+  return (
+    <mesh ref={meshRef} position={[0, 0, -15]}>
+      <planeGeometry args={[36, 20]} />
+      <meshBasicMaterial map={texture} />
+    </mesh>
+  );
+};
 
 const DeskScene = ({ mouseRef }) => {
   const groupRef = useRef();
@@ -61,7 +104,6 @@ const DeskScene = ({ mouseRef }) => {
       <pointLight ref={rgbL1} position={[-3, 2, 2]} intensity={0.8} distance={6} />
       <pointLight ref={rgbL2} position={[ 3, 1, 2]} intensity={0.8} distance={6} />
 
-      {/* Float handles idle bobbing */}
       <Float speed={1.4} rotationIntensity={0} floatIntensity={0.35}>
         <group position={[0, -1.0, 0]}>
 
@@ -109,7 +151,6 @@ const DeskScene = ({ mouseRef }) => {
             <boxGeometry args={[2.5, 0.065, 0.82]} />
             <meshStandardMaterial color="#0a0a0a" roughness={0.65} metalness={0.35} />
           </mesh>
-          {/* Key rows */}
           {[-0.26, 0, 0.26].map((z, i) => (
             <mesh key={i} position={[0, 0.099, 0.32 + z]}>
               <boxGeometry args={[2.35, 0.012, 0.19]} />
@@ -131,7 +172,6 @@ const DeskScene = ({ mouseRef }) => {
             <boxGeometry args={[0.28, 0.008, 0.035]} />
             <meshStandardMaterial ref={msMat} color="#000" emissiveIntensity={2.5} />
           </mesh>
-          {/* Scroll wheel */}
           <mesh position={[1.7, 0.10, 0.26]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.028, 0.028, 0.09, 10]} />
             <meshStandardMaterial color="#333" roughness={0.7} />
@@ -142,37 +182,29 @@ const DeskScene = ({ mouseRef }) => {
             <boxGeometry args={[0.82, 1.76, 1.25]} />
             <meshStandardMaterial color="#0c0c0c" roughness={0.35} metalness={0.85} />
           </mesh>
-          {/* Glass panel */}
           <mesh position={[-1.985, 0.88, -0.55]}>
             <boxGeometry args={[0.015, 1.68, 1.15]} />
             <meshStandardMaterial color="#6688cc" transparent opacity={0.18} roughness={0} metalness={0.95} />
           </mesh>
 
-          {/* Fan 1 */}
           <mesh position={[-1.99, 1.30, -0.55]}>
             <torusGeometry args={[0.20, 0.025, 8, 24]} />
             <meshStandardMaterial ref={fan1Mat} color="#050505" emissiveIntensity={2.2} />
           </mesh>
-
-          {/* Fan 2 */}
           <mesh position={[-1.99, 0.88, -0.55]}>
             <torusGeometry args={[0.20, 0.025, 8, 24]} />
             <meshStandardMaterial ref={fan2Mat} color="#050505" emissiveIntensity={2.2} />
           </mesh>
-
-          {/* Fan 3 */}
           <mesh position={[-1.99, 0.46, -0.55]}>
             <torusGeometry args={[0.20, 0.025, 8, 24]} />
             <meshStandardMaterial ref={fan3Mat} color="#050505" emissiveIntensity={2.2} />
           </mesh>
 
-          {/* Power LED */}
           <mesh position={[-1.99, 1.62, -0.55]}>
             <cylinderGeometry args={[0.05, 0.05, 0.02, 12]} />
             <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={3} />
           </mesh>
 
-          {/* Desk legs */}
           {[[-2.8, -1.2], [-2.8, 1.2], [2.8, -1.2], [2.8, 1.2]].map(([x, z], i) => (
             <mesh key={i} position={[x, -0.54, z]}>
               <boxGeometry args={[0.1, 1.0, 0.1]} />
@@ -203,13 +235,10 @@ const ComputersCanvas = () => {
     <Canvas
       frameloop="always"
       camera={{ position: [0, 1.6, 9.5], fov: 30 }}
-      gl={{ antialias: true, alpha: true, premultipliedAlpha: false }}
-      onCreated={({ gl, scene }) => {
-        gl.setClearColor(0x000000, 0);
-        scene.background = null;
-      }}
-      style={{ width: "100%", height: "100%", background: "transparent" }}
+      gl={{ antialias: true }}
+      style={{ width: "100%", height: "100%" }}
     >
+      <SceneBackground mouseRef={mouseRef} />
       <DeskScene mouseRef={mouseRef} />
     </Canvas>
   );
