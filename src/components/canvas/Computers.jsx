@@ -1,7 +1,6 @@
-import React, { Suspense, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Float } from "@react-three/drei";
-import CanvasLoader from "../Loader";
 
 const CODE_LINES = [
   { x: -0.48, y:  0.60, w: 1.30, c: "#915eff" },
@@ -203,15 +202,15 @@ const ComputersCanvas = () => {
   return (
     <Canvas
       frameloop="always"
-      shadows
       camera={{ position: [0, 1.6, 9.5], fov: 30 }}
-      gl={{ antialias: true, alpha: true }}
-      onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
+      gl={{ antialias: true, alpha: true, premultipliedAlpha: false }}
+      onCreated={({ gl, scene }) => {
+        gl.setClearColor(0x000000, 0);
+        scene.background = null;
+      }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
-      <Suspense fallback={<CanvasLoader />}>
-        <DeskScene mouseRef={mouseRef} />
-      </Suspense>
+      <DeskScene mouseRef={mouseRef} />
     </Canvas>
   );
 };
