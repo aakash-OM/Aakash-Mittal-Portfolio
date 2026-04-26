@@ -9,7 +9,7 @@ const Hero = () => {
   return (
     <section
       className="relative w-full mx-auto"
-      style={{ height: "100vh", overflow: "hidden" }}
+      style={{ height: "100vh", overflow: "hidden", backgroundColor: "var(--color-primary)" }}
     >
       {/* Layer 0 – animated wave lines */}
       <WaveBackground />
